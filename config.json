@@ -1,8 +1,8 @@
 {
-  "account": "SNTAKRU-GFB61245",
-  "user": "APALA", 
-  "password": "Dataanalyst2026! ", 
-  "role": "ACCOUNTADMIN",
-  "warehouse": "COMPUTE_WH",
-  "database": "IOE"
+  "ACCOUNT": "SNTAKRU-GFB61245",
+  "USER": "APALA", 
+  "PASSWORD": "Dataanalyst2026!", 
+  "ROLE": "ACCOUNTADMIN",
+  "WAREHOUSE": "COMPUTE_WH",
+  "DATABASE": "IOE"
 }

@@ -4,7 +4,7 @@ import json
 class Variables:
     def __init__(self):
         self.var = dict()
-        with open('..\config.json')as f:
+        with open('C:\\Users\\Apala\\OneDrive\\Documents\\Datawarehousing\\learning\\config.json')as f:
             self.var = json.load(f)
     def get(self, variable_name):
         if self.exists(variable_name):

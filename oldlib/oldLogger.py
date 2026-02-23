@@ -1,4 +1,4 @@
-from lib.Variables import Variables
+from lib.Variable import Variables
 import datetime
 from os import path
 v=Variables()
