@@ -1,0 +1,53 @@
+2026-02-23 16:04:10.570558: Executing query: TRUNCATE TABLE TEMP.TMP_F_SALES
+2026-02-23 16:04:11.185474: Query Result: [('Statement executed successfully.',)]
+2026-02-23 16:04:11.185611: Executing query: 
+                INSERT INTO TEMP.TMP_F_SALES
+                (ORDER_ID, CUSTOMER_KEY, PRODUCT_KEY, LOCATION_KEY, ORDER_DATE_KEY, SHIP_DATE_KEY, SHIP_MODE_KEY, QUANTITY, DISCOUNT, REVENUE, PROFIT, COST)
+                SELECT
+                    SRC.ORDER_ID
+                    ,CUS.CUSTOMER_KEY
+                    ,PRD.PRODUCT_KEY
+                    ,LOC.LOCATION_KEY
+                    ,ORD_DT.DATE_KEY
+                    ,SIP_DT.DATE_KEY
+                    ,SHIP.SHIP_MODE_KEY
+                    ,SUM(QUANTITY)
+                    ,SUM(DISCOUNT)
+                    ,SUM(REVENUE)
+                    ,SUM(PROFIT)
+                    ,SUM(COST)
+                FROM STAGE.STG_F_SALES SRC
+                INNER JOIN TARGET.TGT_D_CUSTOMER CUS
+                    ON CUS.CUSTOMER_ID = SRC.CUSTOMER_ID
+                INNER JOIN TARGET.TGT_D_PRODUCT PRD
+                    ON PRD.PRODUCT_ID = SRC.PRODUCT_ID
+                INNER JOIN TARGET.TGT_D_LOCATION LOC
+                    ON LOC.COUNTRY = SRC.COUNTRY
+                    AND LOC.REGION = SRC.REGION
+                    AND LOC.STATE = SRC.STATE
+                    AND LOC.CITY = SRC.CITY
+                    AND LOC.POSTAL_CODE = SRC.POSTAL_CODE
+                INNER JOIN TARGET.TGT_D_DATE ORD_DT
+                    ON ORD_DT.FULL_DATE = SRC.ORDER_DATE
+                INNER JOIN TARGET.TGT_D_DATE SIP_DT
+                    ON SIP_DT.FULL_DATE = SRC.SHIP_DATE
+                INNER JOIN TARGET.TGT_D_SHIP_MODE SHIP
+                    ON SHIP.SHIP_MODE = SRC.SHIP_MODE
+                GROUP BY SRC.ORDER_ID, CUS.CUSTOMER_KEY, PRODUCT_KEY, LOCATION_KEY, ORD_DT.DATE_KEY, SIP_DT.DATE_KEY, SHIP.SHIP_MODE_KEY
+            
+2026-02-23 16:04:14.493808: Query Result: [(150000,)]
+2026-02-23 16:04:14.494117: Executing query: 
+                MERGE INTO TARGET.TGT_F_SALES AS TGT
+                USING TEMP.TMP_F_SALES AS TMP
+                    ON TGT.ORDER_ID = TMP.ORDER_ID
+                WHEN MATCHED THEN
+                    UPDATE SET TGT.QUANTITY = TMP.QUANTITY,
+                    TGT.DISCOUNT = TMP.DISCOUNT,
+                    TGT.REVENUE = TMP.REVENUE,
+                    TGT.PROFIT = TMP.PROFIT,
+                    TGT.COST = TMP.COST
+                WHEN NOT MATCHED THEN
+                    INSERT (TGT.ORDER_ID, TGT.CUSTOMER_KEY, TGT.PRODUCT_KEY, TGT.LOCATION_KEY, TGT.ORDER_DATE_KEY, TGT.SHIP_DATE_KEY, TGT.SHIP_MODE_KEY, TGT.QUANTITY, TGT.DISCOUNT, TGT.REVENUE, TGT.PROFIT, TGT.COST)
+                    VALUES (TMP.ORDER_ID, TMP.CUSTOMER_KEY, TMP.PRODUCT_KEY, TMP.LOCATION_KEY, TMP.ORDER_DATE_KEY, TMP.SHIP_DATE_KEY, TMP.SHIP_MODE_KEY, TMP.QUANTITY, TMP.DISCOUNT, TMP.REVENUE, TMP.PROFIT, TMP.COST);
+            
+2026-02-23 16:04:15.644782: Query Result: [(150000, 0)]

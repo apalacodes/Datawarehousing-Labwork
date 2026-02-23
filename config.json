@@ -4,5 +4,13 @@
   "PASSWORD": "Dataanalyst2026!", 
   "ROLE": "ACCOUNTADMIN",
   "WAREHOUSE": "COMPUTE_WH",
-  "DATABASE": "IOE"
+  "DATABASE": "IOE",
+  "LOG_PATH": "log",
+  "LND_SCHEMA": "LANDING",
+  "STG_SCHEMA": "STAGE",
+  "TMP_SCHEMA": "TEMP",
+  "TGT_SCHEMA": "TARGET",
+  "FILE_STAGE": "CSV_FILE"
 }
+
+
