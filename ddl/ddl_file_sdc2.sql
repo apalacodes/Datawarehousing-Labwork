@@ -1,0 +1,324 @@
+    CREATE DATABASE IOE;
+
+    CREATE SCHEMA IOE.LANDING;
+    CREATE SCHEMA IOE.STAGE;
+    CREATE SCHEMA IOE.TEMP;
+    CREATE SCHEMA IOE.TARGET;
+
+    -- STAGE TO DUMP FILES
+    CREATE STAGE IOE.LANDING.CSV_FILE
+    FILE_FORMAT = (
+        TYPE = CSV
+        FIELD_DELIMITER = ','
+        SKIP_HEADER = 1
+        FIELD_OPTIONALLY_ENCLOSED_BY = '"'
+    );
+
+    -- LANDING TABLES
+    CREATE
+        OR REPLACE TABLE IOE.LANDING.SALES (
+        ROW_ID VARCHAR
+        ,ORDER_ID VARCHAR
+        ,ORDER_DATE VARCHAR
+        ,SHIP_DATE VARCHAR
+        ,SHIP_MODE VARCHAR
+        ,CUSTOMER_ID VARCHAR
+        ,CUSTOMER_NAME VARCHAR
+        ,SEGMENT VARCHAR
+        ,COUNTRY VARCHAR
+        ,CITY VARCHAR
+        ,STATE VARCHAR
+        ,POSTAL_CODE VARCHAR
+        ,REGION VARCHAR
+        ,PRODUCT_ID VARCHAR
+        ,CATEGORY VARCHAR
+        ,SUB_CATEGORY VARCHAR
+        ,PRODUCT_NAME VARCHAR
+        ,SALES VARCHAR
+        ,QUANTITY VARCHAR
+        ,DISCOUNT VARCHAR
+        ,PROFIT VARCHAR
+        );
+
+
+    -- Stage Dimension view (Transformation Views)
+    CREATE OR REPLACE VIEW STAGE.STG_D_CUSTOMER (
+        CUSTOMER_ID
+        ,CUSTOMER_NAME
+        ,SEGMENT
+    ) AS
+    SELECT
+        TRIM(CUSTOMER_ID)
+        ,TRIM(CUSTOMER_NAME)
+        ,TRIM(SEGMENT)
+    FROM LANDING.SALES;
+
+    CREATE OR REPLACE VIEW STAGE.STG_D_PRODUCT (
+        PRODUCT_ID
+        ,PRODUCT_NAME
+        ,CATEGORY
+        ,SUB_CATEGORY
+    ) AS
+    SELECT
+        TRIM(PRODUCT_ID)
+        ,TRIM(PRODUCT_NAME)
+        ,TRIM(CATEGORY)
+        ,TRIM(SUB_CATEGORY)
+    FROM LANDING.SALES;
+
+    CREATE OR REPLACE VIEW STAGE.STG_D_LOCATION (
+        COUNTRY
+        ,REGION
+        ,STATE
+        ,CITY
+        ,POSTAL_CODE
+    ) AS
+    SELECT
+        TRIM(COUNTRY)
+        ,TRIM(REGION)
+        ,TRIM(STATE)
+        ,TRIM(CITY)
+        ,TRIM(POSTAL_CODE)
+    FROM LANDING.SALES;
+
+    CREATE OR REPLACE VIEW STAGE.STG_D_SHIP_MODE (
+        SHIP_MODE
+    ) AS
+    SELECT
+        TRIM(SHIP_MODE)
+    FROM LANDING.SALES;
+
+    -- Stage FACT view (Transformation Views)
+    CREATE OR REPLACE VIEW STAGE.STG_F_SALES (
+        order_id
+        ,customer_id
+        ,product_id
+        ,COUNTRY
+        ,REGION
+        ,STATE
+        ,CITY
+        ,POSTAL_CODE
+        ,ORDER_DATE
+        ,SHIP_DATE
+        ,SHIP_MODE
+        ,QUANTITY
+        ,DISCOUNT
+        ,REVENUE
+        ,PROFIT
+        ,COST
+    ) AS
+    SELECT
+        TRIM(order_id)
+        ,TRIM(customer_id)
+        ,TRIM(product_id)
+        ,TRIM(COUNTRY)
+        ,TRIM(REGION)
+        ,TRIM(STATE)
+        ,TRIM(CITY)
+        ,TRIM(POSTAL_CODE)
+        ,TO_DATE(ORDER_DATE, 'MM/DD/YYYY')
+        ,TO_DATE(SHIP_DATE, 'MM/DD/YYYY')
+        ,TRIM(SHIP_MODE)
+        ,TRIM(QUANTITY)
+        ,TRIM(DISCOUNT)
+        ,TRIM(SALES)
+        ,TRIM(PROFIT)
+        ,(TRIM(SALES)::FLOAT - TRIM(PROFIT)::FLOAT) AS COST
+    FROM LANDING.SALES;
+
+    -- Temporary Table
+    CREATE OR REPLACE TABLE TEMP.TMP_D_CUSTOMER (
+        CUSTOMER_ID VARCHAR
+        ,CUSTOMER_NAME VARCHAR
+        ,SEGMENT VARCHAR
+    );
+
+    CREATE OR REPLACE TABLE TEMP.TMP_D_PRODUCT (
+        PRODUCT_ID VARCHAR
+        ,PRODUCT_NAME VARCHAR
+        ,CATEGORY VARCHAR
+        ,SUB_CATEGORY VARCHAR
+    );
+
+    CREATE OR REPLACE TABLE TEMP.TMP_D_LOCATION (
+        COUNTRY VARCHAR
+        ,REGION VARCHAR
+        ,STATE VARCHAR
+        ,CITY VARCHAR
+        ,POSTAL_CODE VARCHAR
+    );
+
+    CREATE OR REPLACE TABLE TEMP.TMP_D_SHIP_MODE (
+        SHIP_MODE VARCHAR
+    );
+
+    CREATE OR REPLACE TABLE TEMP.TMP_F_SALES (
+        ORDER_ID VARCHAR,
+        CUSTOMER_KEY NUMBER,
+        PRODUCT_KEY NUMBER,
+        LOCATION_KEY NUMBER,
+        ORDER_DATE_KEY NUMBER,
+        SHIP_DATE_KEY NUMBER,
+        SHIP_MODE_KEY NUMBER,
+        QUANTITY NUMBER,
+        DISCOUNT FLOAT,
+        REVENUE FLOAT,
+        PROFIT FLOAT,
+        COST FLOAT
+    );
+
+    -- Target Table
+    CREATE OR REPLACE TABLE TARGET.TGT_D_CUSTOMER (
+        CUSTOMER_KEY  NUMBER AUTOINCREMENT PRIMARY KEY
+        ,CUSTOMER_ID VARCHAR
+        ,CUSTOMER_NAME VARCHAR
+        ,SEGMENT VARCHAR
+        ,EFF_START_DATE DATE    DEFAULT CURRENT_DATE       -- when this version became active
+        ,EFF_END_DATE   DATE    DEFAULT '9999-12-31'::DATE -- 9999-12-31 = still current
+        ,IS_CURRENT     BOOLEAN DEFAULT TRUE               -- quick filter: WHERE IS_CURRENT=TRUE
+
+    );
+
+    CREATE OR REPLACE TABLE TARGET.TGT_D_PRODUCT (
+        PRODUCT_KEY  NUMBER AUTOINCREMENT PRIMARY KEY
+        ,PRODUCT_ID VARCHAR
+        ,PRODUCT_NAME VARCHAR
+        ,CATEGORY VARCHAR
+        ,SUB_CATEGORY VARCHAR
+        ,EFF_START_DATE DATE    DEFAULT CURRENT_DATE
+        ,EFF_END_DATE   DATE    DEFAULT '9999-12-31'::DATE
+        ,IS_CURRENT     BOOLEAN DEFAULT TRUE
+    );
+
+    CREATE OR REPLACE TABLE TARGET.TGT_D_LOCATION (
+        LOCATION_KEY  NUMBER AUTOINCREMENT PRIMARY KEY
+        ,COUNTRY VARCHAR
+        ,REGION VARCHAR
+        ,STATE VARCHAR
+        ,CITY VARCHAR
+        ,POSTAL_CODE VARCHAR
+        ,EFF_START_DATE DATE    DEFAULT CURRENT_DATE
+        ,EFF_END_DATE   DATE    DEFAULT '9999-12-31'::DATE
+        ,IS_CURRENT     BOOLEAN DEFAULT TRUE
+    );
+
+    CREATE OR REPLACE TABLE TARGET.TGT_D_SHIP_MODE (
+        SHIP_MODE_KEY NUMBER AUTOINCREMENT PRIMARY KEY
+        ,SHIP_MODE VARCHAR
+    );
+
+    CREATE OR REPLACE TABLE TARGET.TGT_D_DATE (
+        DATE_KEY NUMBER PRIMARY KEY
+        ,FULL_DATE DATE
+        ,YEAR NUMBER
+        ,QUARTER NUMBER
+        ,MONTH NUMBER
+        ,MONTH_NAME VARCHAR
+        ,WEEK NUMBER
+        ,DAY NUMBER
+        ,DAY_OF_WEEK NUMBER
+        ,DAY_NAME VARCHAR
+        ,IS_WEEKEND BOOLEAN
+    );
+
+    CREATE OR REPLACE TABLE TARGET.TGT_F_SALES (
+        ORDER_ID VARCHAR,
+        CUSTOMER_KEY NUMBER,
+        PRODUCT_KEY NUMBER,
+        LOCATION_KEY NUMBER,
+        ORDER_DATE_KEY NUMBER,
+        SHIP_DATE_KEY NUMBER,
+        SHIP_MODE_KEY NUMBER,
+        QUANTITY NUMBER,
+        DISCOUNT FLOAT,
+        REVENUE FLOAT,
+        PROFIT FLOAT,
+        COST FLOAT
+    );
+
+    -- Date fill query
+    SET start_date = '2022-01-01';
+    SET row_count = (SELECT DATEDIFF(DAY, '2022-01-01', '2026-12-31') + 1);
+
+    INSERT INTO TARGET.TGT_D_DATE
+    SELECT
+        TO_NUMBER(TO_CHAR(d, 'YYYYMMDD')) AS date_key,
+        d                                AS full_date,
+        YEAR(d)                          AS year,
+        QUARTER(d)                       AS quarter,
+        MONTH(d)                         AS month,
+        TO_CHAR(d, 'Mon')                AS month_name,
+        WEEK(d)                          AS week,
+        DAY(d)                           AS day,
+        DAYOFWEEK(d)                     AS day_of_week,
+        TO_CHAR(d, 'Dy')                 AS day_name,
+        IFF(DAYOFWEEK(d) IN (0, 6), TRUE, FALSE) AS is_weekend
+    FROM (
+        SELECT DATEADD(DAY, ROW_NUMBER() OVER (ORDER BY NULL) - 1, $start_date::DATE) AS d
+        FROM TABLE(GENERATOR(ROWCOUNT => 2000))
+    )
+    WHERE d <= '2026-12-31'::DATE;
+
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 8.  POWER BI REPORTING VIEW
+--     Always shows the CURRENT version of every dimension (IS_CURRENT = TRUE)
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE VIEW TARGET.VW_SALES_REPORT AS
+SELECT
+    -- Identifiers
+     F.ORDER_ID
+ 
+    -- Customer
+    ,C.CUSTOMER_ID
+    ,C.CUSTOMER_NAME
+    ,C.SEGMENT
+ 
+    -- Product
+    ,P.PRODUCT_ID
+    ,P.PRODUCT_NAME
+    ,P.CATEGORY
+    ,P.SUB_CATEGORY
+ 
+    -- Location  (region / state / city all live in this one table)
+    ,L.COUNTRY
+    ,L.REGION
+    ,L.STATE
+    ,L.CITY
+    ,L.POSTAL_CODE
+ 
+    -- Ship Mode
+    ,SM.SHIP_MODE
+ 
+    -- Dates
+    ,OD.FULL_DATE   AS ORDER_DATE
+    ,OD.YEAR        AS ORDER_YEAR
+    ,OD.QUARTER     AS ORDER_QUARTER
+    ,OD.MONTH_NAME  AS ORDER_MONTH
+    ,OD.IS_WEEKEND  AS ORDER_IS_WEEKEND
+    ,SD.FULL_DATE   AS SHIP_DATE
+ 
+    -- Measures
+    ,F.QUANTITY
+    ,F.DISCOUNT
+    ,F.REVENUE
+    ,F.PROFIT
+    ,F.COST
+ 
+    -- SCD2 audit columns (for history page in Power BI)
+    ,C.EFF_START_DATE  AS CUSTOMER_EFF_START
+    ,C.EFF_END_DATE    AS CUSTOMER_EFF_END
+    ,P.EFF_START_DATE  AS PRODUCT_EFF_START
+    ,P.EFF_END_DATE    AS PRODUCT_EFF_END
+    ,L.EFF_START_DATE  AS LOCATION_EFF_START
+    ,L.EFF_END_DATE    AS LOCATION_EFF_END
+ 
+FROM TARGET.TGT_F_SALES F
+ 
+INNER JOIN TARGET.TGT_D_CUSTOMER  C  ON  C.CUSTOMER_KEY  = F.CUSTOMER_KEY  AND C.IS_CURRENT  = TRUE
+INNER JOIN TARGET.TGT_D_PRODUCT   P  ON  P.PRODUCT_KEY   = F.PRODUCT_KEY   AND P.IS_CURRENT  = TRUE
+INNER JOIN TARGET.TGT_D_LOCATION  L  ON  L.LOCATION_KEY  = F.LOCATION_KEY  AND L.IS_CURRENT  = TRUE
+INNER JOIN TARGET.TGT_D_SHIP_MODE SM ON  SM.SHIP_MODE_KEY= F.SHIP_MODE_KEY AND SM.IS_CURRENT = TRUE
+INNER JOIN TARGET.TGT_D_DATE      OD ON  OD.DATE_KEY     = F.ORDER_DATE_KEY
+INNER JOIN TARGET.TGT_D_DATE      SD ON  SD.DATE_KEY     = F.SHIP_DATE_KEY;
+ 
