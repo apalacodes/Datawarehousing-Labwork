@@ -1,0 +1,18 @@
+2026-03-12 23:15:11.740002: Executing query: TRUNCATE TABLE TEMP.TMP_D_SHIP_MODE
+2026-03-12 23:15:12.477008: Query Result: [('Statement executed successfully.',)]
+2026-03-12 23:15:12.477086: Executing query: 
+                INSERT INTO TEMP.TMP_D_SHIP_MODE
+                (SHIP_MODE)
+                SELECT DISTINCT SHIP_MODE
+                FROM STAGE.STG_D_SHIP_MODE
+            
+2026-03-12 23:15:14.439839: Query Result: [(4,)]
+2026-03-12 23:15:14.439923: Executing query: 
+                INSERT INTO TARGET.TGT_D_SHIP_MODE (SHIP_MODE)
+                SELECT SHIP_MODE
+                FROM TEMP.TMP_D_SHIP_MODE
+                WHERE SHIP_MODE NOT IN ( 
+                    SELECT DISTINCT SHIP_MODE FROM TARGET.TGT_D_SHIP_MODE
+                );
+            
+2026-03-12 23:15:15.631806: Query Result: [(0,)]

@@ -1,0 +1,14 @@
+2026-03-13 01:04:59.087913: Executing query: TRUNCATE TABLE LANDING.SALES
+2026-03-13 01:04:59.991191: Query Result: [('Statement executed successfully.',)]
+2026-03-13 01:04:59.991286: Executing query: 
+            COPY INTO LANDING.SALES
+            FROM @LANDING.CSV_FILE
+            FILE_FORMAT = (
+              TYPE = 'CSV'
+              FIELD_DELIMITER = ','
+              SKIP_HEADER = 1
+              FIELD_OPTIONALLY_ENCLOSED_BY = '"'
+            )
+            ON_ERROR = 'ABORT_STATEMENT';
+            
+2026-03-13 01:05:05.175037: Query Result: [('csv_file/sales_flat_file.csv', 'LOADED', 150000, 150000, 1, 0, None, None, None, None)]
